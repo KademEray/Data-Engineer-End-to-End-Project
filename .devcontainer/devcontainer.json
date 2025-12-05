@@ -1,0 +1,50 @@
+{
+  "name": "OpenSky Data Platform (Local K3d)",
+  "image": "mcr.microsoft.com/devcontainers/python:3.10-bookworm",
+  "features": {
+    // Docker (Basis für alles) - Moby deaktiviert für Stabilität
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "enableNonRootDocker": "true",
+      "moby": "false"
+    },
+    // Java 17 (Für Spark/Kafka Clients)
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17",
+      "jdkDistro": "ms"
+    },
+    // Terraform (Zum Installieren der Helm Charts)
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "version": "latest",
+      "tflint": "latest"
+    },
+    // Kubernetes Tools (kubectl & helm)
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "latest",
+      "minikube": "none",
+      "helm": "latest",
+      "kubectl": "latest"
+    },
+    // Shell Tools
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "configureZshAsDefaultShell": true
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "redhat.java",
+        "hashicorp.terraform",
+        "ms-kubernetes-tools.vscode-kubernetes-tools"
+      ]
+    }
+  },
+  // HIER PASSIERT DIE MAGIE:
+  // 1. ArgoCD CLI installieren
+  // 2. k3d installieren (Das Tool, das uns den K3s Cluster baut)
+  "postCreateCommand": "curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64 && chmod +x argocd && sudo mv argocd /usr/local/bin/ && wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash",
+  
+  "forwardPorts": [8080, 8081, 5432, 4040, 8888],
+  "runArgs": ["--privileged"]
+}
