@@ -1,44 +1,53 @@
 #!/bin/bash
-set -e # Bricht das Skript ab, wenn ein Fehler passiert
+set -e
 
 CLUSTER_NAME="opensky-cluster"
 
-echo "🚀 --- OpenSky Infrastructure Setup ---"
+echo "🚀 --- OpenSky Infrastructure Setup (Clean Version) ---"
 
-# 1. Prüfen, ob der Cluster schon existiert
+# 1. Cluster starten oder erstellen
 if k3d cluster list | grep -q "$CLUSTER_NAME"; then
     echo "✅ Cluster '$CLUSTER_NAME' gefunden."
-    
-    # Versuchen zu starten (falls er gestoppt ist). 
-    # '|| true' verhindert Fehler, falls er schon läuft.
     echo "🔄 Stelle sicher, dass der Cluster läuft..."
     k3d cluster start "$CLUSTER_NAME" >/dev/null 2>&1 || true
-    
 else
-    echo "🆕 Kein Cluster gefunden. Erstelle '$CLUSTER_NAME'..."
-    
-    # Cluster erstellen mit Port-Mappings
-    # 8080:80   -> Für Ingress (Webseiten wie Airflow)
-    # 8081:8081 -> Reserve für ArgoCD UI Direktzugriff
-    # 5432:5432 -> Für direkten Datenbankzugriff (Postgres)
+    echo "🆕 Erstelle Cluster '$CLUSTER_NAME'..."
+    # WICHTIG: Wir mappen nur noch Port 8080 auf den Cluster-Ingress (Port 80)
+    # Alle anderen Ports (8081, 5432) sind entfernt!
     k3d cluster create "$CLUSTER_NAME" \
         --api-port 6443 \
         -p "8080:80@loadbalancer" \
-        -p "8081:8081@loadbalancer" \
-        -p "5432:5432@loadbalancer" \
         --agents 1 \
         --wait
-        
-    echo "✨ Cluster erfolgreich erstellt!"
 fi
 
-# 2. Kubectl Verbindung herstellen (Context setzen)
+# 2. Context setzen
 k3d kubeconfig merge "$CLUSTER_NAME" --kubeconfig-switch-context
-echo "✅ Kubectl Context ist auf '$CLUSTER_NAME' gesetzt."
 
-# 3. Warten, bis die internen Dienste (DNS) bereit sind
-echo "⏳ Warte auf CoreDNS (System bereit)..."
-kubectl wait --for=condition=ready pod -l k8s-app=kube-dns -n kube-system --timeout=60s
+# 3. Namespaces erstellen
+echo "📦 Erstelle Namespaces..."
+kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace kafka --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace processing --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace airflow --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace database --dry-run=client -o yaml | kubectl apply -f -
 
-echo "🎉 Fertig! Dein Kubernetes Cluster läuft."
-kubectl get nodes
+# 4. ArgoCD installieren
+echo "🐙 Installiere ArgoCD..."
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+# 5. ArgoCD patchen (Sicherer JSON Patch)
+echo "🔧 Konfiguriere ArgoCD für lokal..."
+# Wir nutzen --type='json', um chirurgisch nur die 'args' Liste zu tauschen.
+# Das lässt das 'image' und andere Felder unberührt.
+kubectl patch deployment argocd-server -n argocd \
+  --type='json' \
+  -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/args", "value": ["/usr/local/bin/argocd-server", "--insecure", "--staticassets", "/shared/app"]}]'
+  
+# 6. Warten bis ArgoCD läuft
+echo "⏳ Warte auf ArgoCD..."
+kubectl wait --for=condition=available deployment/argocd-server -n argocd --timeout=300s
+
+echo "🎉 FERTIG! Cluster & ArgoCD laufen."
+echo "🔐 Hole Passwort..."
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo

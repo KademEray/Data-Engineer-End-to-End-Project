@@ -37,7 +37,6 @@ Kubernetes Namespace Resources: kafka, processing, airflow, database.
 
 [x] Access Check: ArgoCD Admin-Passwort auslesen (kubectl get secret...) und UI Login (localhost:8081) testen.
 -> kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
-= gsdYWYYxvzss4gJ1
 
 Getty Images
 Entdecken
