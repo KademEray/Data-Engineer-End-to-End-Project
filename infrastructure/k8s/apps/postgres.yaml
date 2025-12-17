@@ -8,11 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    # Wir bleiben beim HTTPS Repo für das Chart (einfacher für ArgoCD),
-    # aber wir holen das Image gezielt via Tag.
     repoURL: https://charts.bitnami.com/bitnami
     chart: postgresql
-    targetRevision: 16.2.5 # Entspricht Chart Version für Postgres 16/17 Basis
+    targetRevision: 16.2.5
     helm:
       values: |
         global:
@@ -22,14 +20,13 @@ spec:
               postgresPassword: "admin"
               database: "flight_data"
         
-        # 👇 DER FIX AUS DEINEM REPORT
+        # FIX: Nur "latest" ist für Free-User garantiert verfügbar
         image:
           registry: docker.io
           repository: bitnami/postgresql
-          tag: "17.2.0-debian-12-r5" # Exakter, existierender Tag
-          pullPolicy: IfNotPresent   # WICHTIG: Spart Downloads & Rate Limits
+          tag: "latest"
+          pullPolicy: IfNotPresent
 
-        # Architektur: Standalone (Spart Ressourcen)
         architecture: standalone
         primary:
           resources:

@@ -10,14 +10,15 @@ spec:
   source:
     repoURL: https://charts.bitnami.com/bitnami
     chart: kafka
-    targetRevision: 32.4.3 # Das Chart für Kafka 4.0
+    targetRevision: 32.4.3
     helm:
       values: |
-        # 👇 DER FIX AUS DEINEM REPORT
+        # WICHTIG: Da Bitnami versionierte Tags für Free-User gelöscht hat,
+        # müssen wir "latest" nutzen.
         image:
           registry: docker.io
           repository: bitnami/kafka
-          tag: "4.0.0-debian-12-r10" # Exakter Tag für Kafka 4.0
+          tag: "latest"
           pullPolicy: IfNotPresent
         
         # KRaft Modus (Ohne Zookeeper)
@@ -26,22 +27,20 @@ spec:
         zookeeper:
           enabled: false
         
-        # Single-Node Optimierung (Combined Mode)
+        # Single-Node Optimierung
         controller:
           replicaCount: 1
           resources:
              limits:
                memory: "768Mi"
-          # Damit alles auf einem Node läuft:
           podAntiAffinityPreset: ""
           affinity: {}
         
         broker:
-          replicaCount: 0 # Combined Mode: Controller übernimmt Broker-Rolle
+          replicaCount: 0
           podAntiAffinityPreset: ""
           affinity: {}
         
-        # Listener Konfiguration
         listeners:
           client:
             protocol: PLAINTEXT
