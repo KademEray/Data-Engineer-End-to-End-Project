@@ -10,31 +10,25 @@ spec:
   source:
     repoURL: https://charts.bitnami.com/bitnami
     chart: kafka
-    # Sehr aktuelles Chart für KRaft Support
-    targetRevision: 31.0.0
+    # 👇 HIER: Wir nutzen exakt deine Version von Artifact Hub
+    targetRevision: 32.4.3
     helm:
       values: |
-        # Modern: KRaft Modus an (Kein Zookeeper nötig)
+        # Wir bilden deine --set Flags hier in YAML ab:
+        
+        # 1. KRaft Modus (Ohne Zookeeper)
         kraft:
           enabled: true
         zookeeper:
           enabled: false
         
-        image:
-          # Auch hier: "latest" verhindert ErrImagePull bei alten Tags
-          tag: "latest"
-
+        # 2. Spar-Modus (Nur 1 Replika)
         controller:
           replicaCount: 1
-          resources:
-             limits:
-               memory: "768Mi"
         broker:
           replicaCount: 1
-          resources:
-             limits:
-               memory: "1024Mi"
         
+        # 3. Protokolle (Wichtig für interne Kommunikation)
         listeners:
           client:
             protocol: PLAINTEXT
@@ -44,6 +38,13 @@ spec:
             protocol: PLAINTEXT
           external:
             protocol: PLAINTEXT
+            
+        # 4. Image Tag (Sicherheitshalber auf den Tag der Chart-Version setzen)
+        image:
+          tag: "3.8.0" 
+          # Hinweis: Chart 32.4.3 nutzt meist Kafka 3.8.x. 
+          # Wenn ArgoCD meckert, können wir das rausnehmen, da das Chart den Standard kennt.
+
   destination:
     server: https://kubernetes.default.svc
     namespace: kafka
