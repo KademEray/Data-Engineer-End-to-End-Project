@@ -10,25 +10,30 @@ spec:
   source:
     repoURL: https://charts.bitnami.com/bitnami
     chart: kafka
-    targetRevision: 29.3.5
+    # Sehr aktuelles Chart für KRaft Support
+    targetRevision: 31.0.0
     helm:
       values: |
-        # 👇 Modern: KRaft Modus an, Zookeeper aus
+        # Modern: KRaft Modus an (Kein Zookeeper nötig)
         kraft:
           enabled: true
         zookeeper:
           enabled: false
         
+        image:
+          # Auch hier: "latest" verhindert ErrImagePull bei alten Tags
+          tag: "latest"
+
         controller:
           replicaCount: 1
           resources:
              limits:
-               memory: "512Mi"
+               memory: "768Mi"
         broker:
           replicaCount: 1
           resources:
              limits:
-               memory: "768Mi"
+               memory: "1024Mi"
         
         listeners:
           client:

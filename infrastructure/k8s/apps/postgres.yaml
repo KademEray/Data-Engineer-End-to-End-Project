@@ -10,8 +10,8 @@ spec:
   source:
     repoURL: https://charts.bitnami.com/bitnami
     chart: postgresql
-    # Wir nehmen eine sehr aktuelle Chart-Version als Basis
-    targetRevision: 16.0.0
+    # Eine stabile, moderne Chart-Version von Artifact Hub
+    targetRevision: 16.2.5
     helm:
       values: |
         global:
@@ -20,11 +20,12 @@ spec:
               postgresPassword: "admin"
               database: "flight_data"
         
-        # 👇 HIER DER SWITCH AUF VERSION 18
         image:
-          tag: "18"
-
-        # Ressourcensparend für lokal
+          # "latest" ist bei Bitnami für Free-User oft die sicherste Wahl, 
+          # da versionierte Tags verschoben wurden.
+          tag: "latest"
+        
+        # Einfache Architektur (Spart Ressourcen)
         architecture: standalone
         primary:
           resources:

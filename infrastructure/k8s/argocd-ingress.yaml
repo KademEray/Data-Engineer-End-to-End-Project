@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-server-ingress
+  namespace: argocd
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: "false" # Wichtig für localhost
+    traefik.ingress.kubernetes.io/router.tls: "false"
+spec:
+  rules:
+  - host: argocd.localhost
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: argocd-server
+            port:
+              # Da wir --insecure nutzen, hört der Service intern auf HTTP (Port 80)
+              number: 80
