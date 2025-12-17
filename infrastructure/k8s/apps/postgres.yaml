@@ -8,30 +8,40 @@ metadata:
 spec:
   project: default
   source:
+    # Wir bleiben beim HTTPS Repo für das Chart (einfacher für ArgoCD),
+    # aber wir holen das Image gezielt via Tag.
     repoURL: https://charts.bitnami.com/bitnami
     chart: postgresql
-    # Eine stabile, moderne Chart-Version von Artifact Hub
-    targetRevision: 16.2.5
+    targetRevision: 16.2.5 # Entspricht Chart Version für Postgres 16/17 Basis
     helm:
       values: |
         global:
+          storageClass: "local-path"
           postgresql:
             auth:
               postgresPassword: "admin"
               database: "flight_data"
         
+        # 👇 DER FIX AUS DEINEM REPORT
         image:
-          # "latest" ist bei Bitnami für Free-User oft die sicherste Wahl, 
-          # da versionierte Tags verschoben wurden.
-          tag: "latest"
-        
-        # Einfache Architektur (Spart Ressourcen)
+          registry: docker.io
+          repository: bitnami/postgresql
+          tag: "17.2.0-debian-12-r5" # Exakter, existierender Tag
+          pullPolicy: IfNotPresent   # WICHTIG: Spart Downloads & Rate Limits
+
+        # Architektur: Standalone (Spart Ressourcen)
         architecture: standalone
         primary:
           resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              cpu: 1000m
+              memory: 512Mi
+          persistence:
+            enabled: true
+            size: 1Gi
   destination:
     server: https://kubernetes.default.svc
     namespace: database

@@ -10,22 +10,38 @@ spec:
   source:
     repoURL: https://charts.bitnami.com/bitnami
     chart: kafka
-    targetRevision: 32.4.3
+    targetRevision: 32.4.3 # Das Chart für Kafka 4.0
     helm:
       values: |
+        # 👇 DER FIX AUS DEINEM REPORT
+        image:
+          registry: docker.io
+          repository: bitnami/kafka
+          tag: "4.0.0-debian-12-r10" # Exakter Tag für Kafka 4.0
+          pullPolicy: IfNotPresent
+        
         # KRaft Modus (Ohne Zookeeper)
         kraft:
           enabled: true
         zookeeper:
           enabled: false
         
-        # Spar-Modus
+        # Single-Node Optimierung (Combined Mode)
         controller:
           replicaCount: 1
-        broker:
-          replicaCount: 1
+          resources:
+             limits:
+               memory: "768Mi"
+          # Damit alles auf einem Node läuft:
+          podAntiAffinityPreset: ""
+          affinity: {}
         
-        # Protokolle (Wichtig!)
+        broker:
+          replicaCount: 0 # Combined Mode: Controller übernimmt Broker-Rolle
+          podAntiAffinityPreset: ""
+          affinity: {}
+        
+        # Listener Konfiguration
         listeners:
           client:
             protocol: PLAINTEXT
@@ -35,9 +51,6 @@ spec:
             protocol: PLAINTEXT
           external:
             protocol: PLAINTEXT
-            
-        # HIER WURDE DER IMAGE-BLOCK ENTFERNT!
-        # Das Chart nimmt jetzt automatisch den passenden Standard.
 
   destination:
     server: https://kubernetes.default.svc
