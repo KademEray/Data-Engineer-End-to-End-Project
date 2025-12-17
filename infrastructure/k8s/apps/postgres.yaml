@@ -1,50 +1,56 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: database
+  name: postgresql-local
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
-    repoURL: https://charts.bitnami.com/bitnami
-    chart: postgresql
-    targetRevision: 16.2.5
+    # Nutzung der OCI Registry ist stabiler als das alte HTTP Repo
+    repoURL: registry-1.docker.io
+    targetRevision: 18.1.14
+    chart: bitnamicharts/postgresql
     helm:
-      values: |
-        global:
-          storageClass: "local-path"
-          postgresql:
-            auth:
-              postgresPassword: "admin"
-              database: "flight_data"
-        
-        # FIX: Nur "latest" ist für Free-User garantiert verfügbar
+      releaseName: postgresql
+      valuesObject:
+        # FIX: Exakter Tag statt "latest" verhindert ErrImagePull [1]
         image:
           registry: docker.io
           repository: bitnami/postgresql
-          tag: "latest"
+          tag: "17.2.0-debian-12-r5"
           pullPolicy: IfNotPresent
-
+        
+        # Ressourcensparende Konfiguration für lokalen K3d
         architecture: standalone
+        
+        auth:
+          username: "admin"
+          database: "flight_data"
+          # Setze hier ein festes Passwort oder nutze Secrets
+          postgresPassword: "adminpassword" 
+          password: "dbpassword"
+
         primary:
+          persistence:
+            enabled: true
+            size: 1Gi
           resources:
             requests:
               cpu: 250m
               memory: 256Mi
             limits:
-              cpu: 1000m
               memory: 512Mi
-          persistence:
-            enabled: true
-            size: 1Gi
+
   destination:
     server: https://kubernetes.default.svc
-    namespace: database
+    namespace: database-services
+  
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true

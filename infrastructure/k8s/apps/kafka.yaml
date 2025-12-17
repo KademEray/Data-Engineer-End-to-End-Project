@@ -1,46 +1,47 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: kafka
+  name: kafka-local
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
-    repoURL: https://charts.bitnami.com/bitnami
-    chart: kafka
+    repoURL: registry-1.docker.io
     targetRevision: 32.4.3
+    chart: bitnamicharts/kafka
     helm:
-      values: |
-        # WICHTIG: Da Bitnami versionierte Tags für Free-User gelöscht hat,
-        # müssen wir "latest" nutzen.
+      releaseName: kafka
+      valuesObject:
+        # FIX: Exakter Tag für Kafka 4.0 [2]
         image:
           registry: docker.io
           repository: bitnami/kafka
-          tag: "latest"
+          tag: "4.0.0-debian-12-r10"
           pullPolicy: IfNotPresent
-        
-        # KRaft Modus (Ohne Zookeeper)
-        kraft:
-          enabled: true
+
+        # Konfiguration für Kafka 4.0 (KRaft ist jetzt Standard, 'kraft.enabled' ist deprecated)
         zookeeper:
           enabled: false
-        
-        # Single-Node Optimierung
+
+        # Single-Node Combined Mode (Controller + Broker in einem Pod)
         controller:
           replicaCount: 1
+          # WICHTIG: Heap reduzieren, sonst killt K3d den Pod (OOM)
+          heapOpts: "-Xmx512m -Xms512m"
           resources:
-             limits:
-               memory: "768Mi"
+            limits:
+              memory: "1Gi"
+          # Anti-Affinity deaktivieren für Single-Node Cluster
           podAntiAffinityPreset: ""
           affinity: {}
         
         broker:
-          replicaCount: 0
+          replicaCount: 0 # 0 Broker, da der Controller diese Rolle übernimmt
           podAntiAffinityPreset: ""
           affinity: {}
-        
+
         listeners:
           client:
             protocol: PLAINTEXT
@@ -53,10 +54,12 @@ spec:
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: kafka
+    namespace: database-services
+  
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
