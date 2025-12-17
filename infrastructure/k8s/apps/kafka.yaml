@@ -3,22 +3,41 @@ kind: Application
 metadata:
   name: kafka
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
     repoURL: https://charts.bitnami.com/bitnami
     chart: kafka
-    targetRevision: 26.4.2
+    targetRevision: 29.3.5
     helm:
       values: |
+        # 👇 Modern: KRaft Modus an, Zookeeper aus
+        kraft:
+          enabled: true
+        zookeeper:
+          enabled: false
+        
         controller:
           replicaCount: 1
+          resources:
+             limits:
+               memory: "512Mi"
         broker:
           replicaCount: 1
-        zookeeper:
-          replicaCount: 1
+          resources:
+             limits:
+               memory: "768Mi"
+        
         listeners:
           client:
+            protocol: PLAINTEXT
+          controller:
+            protocol: PLAINTEXT
+          interbroker:
+            protocol: PLAINTEXT
+          external:
             protocol: PLAINTEXT
   destination:
     server: https://kubernetes.default.svc

@@ -3,12 +3,15 @@ kind: Application
 metadata:
   name: database
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
     repoURL: https://charts.bitnami.com/bitnami
     chart: postgresql
-    targetRevision: 12.12.10
+    # Wir nehmen eine sehr aktuelle Chart-Version als Basis
+    targetRevision: 16.0.0
     helm:
       values: |
         global:
@@ -16,6 +19,18 @@ spec:
             auth:
               postgresPassword: "admin"
               database: "flight_data"
+        
+        # 👇 HIER DER SWITCH AUF VERSION 18
+        image:
+          tag: "18"
+
+        # Ressourcensparend für lokal
+        architecture: standalone
+        primary:
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
   destination:
     server: https://kubernetes.default.svc
     namespace: database
