@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/DEIN_GITHUB_USER/Data-Engineer-End-to-End-Project.git # ⚠️ DEIN REPO URL!
+    repoURL: https://github.com/KademEray/Data-Engineer-End-to-End-Project.git # ⚠️ DEIN REPO URL!
     targetRevision: main
     path: infrastructure/k8s/postgres-manifests
   destination:
