@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: opensky-producer
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    # 👇 HIER DEINEN NAMEN EINTRAGEN
+    repoURL: https://github.com/KademEray/Data-Engineer-End-to-End-Project.git
+    targetRevision: main
+    path: infrastructure/k8s/producer-manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kafka
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
