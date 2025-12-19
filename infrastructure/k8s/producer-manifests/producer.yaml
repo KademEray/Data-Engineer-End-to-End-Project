@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opensky-producer
-  namespace: kafka # Er läuft im selben Namespace wie Kafka
+  namespace: kafka
 spec:
   replicas: 1
   selector:
@@ -15,9 +15,9 @@ spec:
     spec:
       containers:
       - name: producer
-        # 👇 HIER DEINEN NAMEN EINTRAGEN (z.B. ghcr.io/eray5/opensky-producer:latest)
-        image: ghcr.io/kademeray/opensky-producer:latest
-        imagePullPolicy: Always # Zwingt ihn, immer die neueste Version zu laden
+        # 👇 KORREKTUR: Der lange Pfad mit Repo-Namen
+        image: ghcr.io/kademeray/data-engineer-end-to-end-project/opensky-producer:latest
+        imagePullPolicy: Always
         resources:
           limits:
             memory: "256Mi"
