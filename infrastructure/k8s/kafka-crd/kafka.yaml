@@ -35,6 +35,3 @@ spec:
       type: persistent-claim
       size: 5Gi
       deleteClaim: false
-  entityOperator:
-    topicOperator: {}
-    userOperator: {}
