@@ -72,5 +72,6 @@ def main():
         # OpenSky Free Tier Limit: Alle 10s
         time.sleep(10)
 
+
 if __name__ == "__main__":
     main()
