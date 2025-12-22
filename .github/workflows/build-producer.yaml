@@ -1,11 +1,12 @@
 name: Build Producer
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
     paths:
-      - 'src/producer/**' # Nur ausführen, wenn wir am Producer arbeiten
+      - 'src/producer/**'
 
 env:
   REGISTRY: ghcr.io
@@ -16,11 +17,40 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write # WICHTIG: Erlaubt Upload zu GitHub Packages
+      packages: write
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+
+      # 👇 NEU: Python Umgebung aufsetzen
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      # 👇 NEU: Abhängigkeiten installieren (für den Test)
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r src/producer/requirements.txt
+
+      # 👇 NEU: Code Quality Check (Linting)
+      # Wir erlauben Fehler (exit-zero), zeigen sie aber an. 
+      # Später kannst du das strikter machen.
+      - name: Run Pylint
+        run: |
+          pylint src/producer/*.py --disable=C0114,C0115,C0116,W0718 || true
+          echo "Linting complete (warnings ignored for now)"
+
+      # 👇 NEU: Unit Tests laufen lassen
+      # Wenn das hier fehlschlägt, stoppt die Pipeline SOFORT!
+      - name: Run Unit Tests
+        run: |
+          cd src/producer
+          pytest
+
+      # --- Ab hier wie früher (nur wenn Tests grün waren) ---
 
       - name: Log in to the Container registry
         uses: docker/login-action@v2
