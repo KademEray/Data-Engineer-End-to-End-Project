@@ -10,7 +10,7 @@
 - [x] **Message Broker (Strimzi Kafka):** Cluster & CRDs installiert.
 - [x] **Datenbank (Postgres Vanilla):** Deployment & PVC installiert.
 - [x] **Producer (Python):** Code, Dockerfile, CI-Pipeline (GitHub Action).
-- [ ] Linting: Prüfen, ob der Python-Code sauber geschrieben ist (pylint / flake8). // Testing: Automatisierte Tests (pytest), bevor das Image überhaupt gebaut wird.
+- [X] Linting: Prüfen, ob der Python-Code sauber geschrieben ist (pylint / flake8). // Testing: Automatisierte Tests (pytest), bevor das Image überhaupt gebaut wird.
 
 ## 3. DevOps & Automation (🚧 HIER SIND WIR)
 - [ ] **ArgoCD Image Updater:**
@@ -24,6 +24,8 @@
     - [ ] Dockerfile für Spark Consumer.
     - [ ] Deployment erstellen.
 - [ ] **Stream Processing:** Kafka -> Spark -> Postgres.
+
+- Apache Airflow
 
 ## 5. Visualization & Monitoring (Geplant)
 - [ ] Streamlit Dashboard.
