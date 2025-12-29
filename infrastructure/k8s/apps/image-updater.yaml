@@ -9,8 +9,8 @@ spec:
   project: default
   source:
     repoURL: https://github.com/argoproj-labs/argocd-image-updater.git
-    targetRevision: master
-    path: manifests/install
+    targetRevision: stable
+    path: manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
