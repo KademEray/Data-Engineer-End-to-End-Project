@@ -11,6 +11,15 @@ spec:
     repoURL: https://argoproj.github.io/argo-helm
     chart: argocd-image-updater
     targetRevision: 0.14.0
+    # 👇 Das ist der wichtige Teil für die Anmeldung:
+    helm:
+      values: |
+        config:
+          registries:
+            - name: GitHub Container Registry
+              api_url: https://ghcr.io
+              prefix: ghcr.io
+              credentials: secret:argocd/ghcr-secret
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
