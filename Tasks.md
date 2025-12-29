@@ -14,9 +14,9 @@
 
 ## 3. DevOps & Automation (🚧 HIER SIND WIR)
 - [ ] **ArgoCD Image Updater:**
-    - [ ] Updater im Cluster installieren.
-    - [ ] Secret für GHCR Zugriff (Registry) anlegen.
-    - [ ] Annotations zur Producer-App hinzufügen ("Update mich bitte").
+    - [X] Updater im Cluster installieren.
+    - [X] Secret für GHCR Zugriff (Registry) anlegen.
+    - [X] Annotations zur Producer-App hinzufügen ("Update mich bitte").
 - [ ] **Testlauf:** Code ändern -> Push -> Automatischer Deploy im Cluster beobachten.
 
 ## 4. Data Processing Layer (Verschoben)
