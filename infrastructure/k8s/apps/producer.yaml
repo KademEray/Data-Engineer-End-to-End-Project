@@ -3,20 +3,16 @@ kind: Application
 metadata:
   name: opensky-producer
   namespace: argocd
-  # 👇 NEU: Diese Annotations steuern das Update
   annotations:
-    # 1. Image Alias definieren (DEIN_USER anpassen!)
-    argocd-image-updater.argoproj.io/image-list: myproducer=ghcr.io/KademEray/opensky-producer
-    # 2. Strategie: Prüfe auf neuen Digest (Hash), da Tag immer 'latest' ist
+    # 👇 WICHTIG: Hier steht jetzt der korrekte, lange Name (alles klein)!
+    argocd-image-updater.argoproj.io/image-list: myproducer=ghcr.io/kademeray/data-engineer-end-to-end-project/opensky-producer
     argocd-image-updater.argoproj.io/myproducer.update-strategy: digest
-    # 3. Methode: Schreibe Änderung zurück ins Git
     argocd-image-updater.argoproj.io/write-back-method: git
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
-    # 👇 HIER DEINEN NAMEN EINTRAGEN
     repoURL: https://github.com/KademEray/Data-Engineer-End-to-End-Project.git
     targetRevision: main
     path: infrastructure/k8s/producer-manifests
