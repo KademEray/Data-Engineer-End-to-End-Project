@@ -12,7 +12,7 @@ spec:
     # -----------------------------------------------------------------
     repoURL: https://github.com/KademEray/Data-Engineer-End-to-End-Project
     path: infrastructure/k8s/apps
-    targetRevision: main
+    targetRevision: HEAD
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
