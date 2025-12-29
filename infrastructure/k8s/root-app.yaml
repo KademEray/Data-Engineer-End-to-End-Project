@@ -6,13 +6,12 @@ metadata:
 spec:
   project: default
   source:
-    # -----------------------------------------------------------------
-    # WICHTIG: Ersetze die URL unten mit deinem echten GitHub-Repo Link!
-    # Beispiel: https://github.com/eray5/Data-Engineer-Project.git
-    # -----------------------------------------------------------------
-    repoURL: https://github.com/KademEray/Data-Engineer-End-to-End-Project
+    # 👇 ÄNDERUNG: .git am Ende
+    repoURL: https://github.com/KademEray/Data-Engineer-End-to-End-Project.git
+    # 👇 RICHTIG: Zeigt auf den Ordner mit den App-YAMLs (producer.yaml etc.)
     path: infrastructure/k8s/apps
-    targetRevision: HEAD
+    # 👇 ÄNDERUNG: main statt HEAD
+    targetRevision: main
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
