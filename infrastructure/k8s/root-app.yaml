@@ -10,9 +10,9 @@ spec:
     # WICHTIG: Ersetze die URL unten mit deinem echten GitHub-Repo Link!
     # Beispiel: https://github.com/eray5/Data-Engineer-Project.git
     # -----------------------------------------------------------------
-    repoURL: https://github.com/KademEray/Data-Engineer-End-to-End-Project
+    repoURL: https://github.com/KademEray/Data-Engineer-End-to-End-Project.git
     path: infrastructure/k8s/apps
-    targetRevision: HEAD
+    targetRevision: main
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
