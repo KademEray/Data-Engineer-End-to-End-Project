@@ -1,4 +1,4 @@
-name: Build Producer
+name: Build and Deploy Producer
 
 on:
   workflow_dispatch:
@@ -7,51 +7,53 @@ on:
       - main
     paths:
       - 'src/producer/**'
+      - '.github/workflows/build-producer.yaml'
 
 env:
   REGISTRY: ghcr.io
+  # Hier nutzen wir github.repository, damit es immer stimmt
   IMAGE_NAME: ${{ github.repository }}/opensky-producer
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
+      contents: write   # WICHTIG: Erlaubt dem Bot, die kustomization.yaml zu ändern & zu pushen
+      packages: write   # Erlaubt das Pushen des Docker Images
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # 👇 NEU: Python Umgebung aufsetzen
+      # ---------------------------------------------------------
+      # 1. QUALITÄTSSICHERUNG (Python Tests)
+      # ---------------------------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      # 👇 NEU: Abhängigkeiten installieren (für den Test)
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r src/producer/requirements.txt
+          pip install pylint pytest  # Tools für Tests installieren
 
-      # 👇 NEU: Code Quality Check (Linting)
-      # Wir erlauben Fehler (exit-zero), zeigen sie aber an. 
-      # Später kannst du das strikter machen.
       - name: Run Pylint
+        # || true sorgt dafür, dass die Pipeline bei Linting-Fehlern NICHT abbricht (erstmal)
         run: |
           pylint src/producer/*.py --disable=C0114,C0115,C0116,W0718 || true
-          echo "Linting complete (warnings ignored for now)"
+          echo "Linting complete"
 
-      # 👇 NEU: Unit Tests laufen lassen
-      # Wenn das hier fehlschlägt, stoppt die Pipeline SOFORT!
       - name: Run Unit Tests
+        # Wenn Tests fehlschlagen, bricht hier alles ab (gut so!)
         run: |
           cd src/producer
           pytest
 
-      # --- Ab hier wie früher (nur wenn Tests grün waren) ---
-
+      # ---------------------------------------------------------
+      # 2. DOCKER BUILD & PUSH
+      # ---------------------------------------------------------
       - name: Log in to the Container registry
         uses: docker/login-action@v2
         with:
@@ -61,15 +63,51 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      
-      # Zwingt den Namen auf Kleinschreibung (Docker mag keine Großbuchstaben)
+
       - name: Lowercase Image Name
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
 
-      - name: Build and Push
+      - name: Get Short SHA
+        id: vars
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v4
         with:
           context: ./src/producer
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          # Wir pushen ZWEI Tags: 'latest' und die eindeutige ID (SHA)
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}
+
+      # ---------------------------------------------------------
+      # 3. GITOPS UPDATE (Kustomization ändern)
+      # ---------------------------------------------------------
+      - name: Update Kustomization.yaml
+        run: |
+          # Git Identität setzen
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'actions@github.com'
+
+          # In den K8s Ordner wechseln
+          cd infrastructure/k8s/producer-manifests
+
+          # Kustomize Tool installieren (falls nicht vorhanden)
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          
+          # Das Image Tag in der Datei ändern (z.B. von "latest" auf "a1b2c3d")
+          ./kustomize edit set image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}
+          
+          # Tool wieder löschen (wollen wir nicht committen)
+          rm kustomize
+
+          # Änderungen prüfen, committen und pushen
+          git add kustomization.yaml
+          if git diff-index --quiet HEAD; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update producer image tag to ${{ env.SHORT_SHA }}"
+            git push
+          fi

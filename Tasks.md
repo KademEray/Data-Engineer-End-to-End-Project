@@ -13,11 +13,12 @@
 - [X] Linting: Prüfen, ob der Python-Code sauber geschrieben ist (pylint / flake8). // Testing: Automatisierte Tests (pytest), bevor das Image überhaupt gebaut wird.
 
 ## 3. DevOps & Automation (🚧 HIER SIND WIR)
-- [ ] **ArgoCD Image Updater:**
+- [ ] **Image Updater:**
     - [X] Updater im Cluster installieren.
-    - [X] Secret für GHCR Zugriff (Registry) anlegen.
-    - [X] Annotations zur Producer-App hinzufügen ("Update mich bitte").
+    - [X] Annotations zur Producer-App hinzufügen.
 - [ ] **Testlauf:** Code ändern -> Push -> Automatischer Deploy im Cluster beobachten.
+---Aktuell klappt nicht wird später wieder versucht, zurzeit manuell mit:
+kubectl rollout restart deployment opensky-producer -n kafka
 
 ## 4. Data Processing Layer (Verschoben)
 - [ ] **Spark Setup:**

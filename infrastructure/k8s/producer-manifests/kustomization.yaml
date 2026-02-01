@@ -6,4 +6,3 @@ resources:
 
 images:
   - name: ghcr.io/kademeray/data-engineer-end-to-end-project/opensky-producer
-    newTag: latest

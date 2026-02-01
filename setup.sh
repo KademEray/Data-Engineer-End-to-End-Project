@@ -3,7 +3,7 @@ set -e
 
 CLUSTER_NAME="opensky-cluster"
 
-echo "🚀 --- OpenSky Infrastructure Setup (Clean Version) ---"
+echo "🚀 --- OpenSky Infrastructure Setup (Final Polish) ---"
 
 # 1. Cluster starten oder erstellen
 if k3d cluster list | grep -q "$CLUSTER_NAME"; then
@@ -12,8 +12,7 @@ if k3d cluster list | grep -q "$CLUSTER_NAME"; then
     k3d cluster start "$CLUSTER_NAME" >/dev/null 2>&1 || true
 else
     echo "🆕 Erstelle Cluster '$CLUSTER_NAME'..."
-    # WICHTIG: Wir mappen nur noch Port 8080 auf den Cluster-Ingress (Port 80)
-    # Alle anderen Ports (8081, 5432) sind entfernt!
+    # Port 8080 (Host) -> Port 80 (Traefik Ingress)
     k3d cluster create "$CLUSTER_NAME" \
         --api-port 6443 \
         -p "8080:80@loadbalancer" \
@@ -36,18 +35,52 @@ kubectl create namespace database --dry-run=client -o yaml | kubectl apply -f -
 echo "🐙 Installiere ArgoCD..."
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
-# 5. ArgoCD patchen (Sicherer JSON Patch)
-echo "🔧 Konfiguriere ArgoCD für lokal..."
-# Wir nutzen --type='json', um chirurgisch nur die 'args' Liste zu tauschen.
-# Das lässt das 'image' und andere Felder unberührt.
+# 5. ArgoCD patchen (Insecure Mode & Performance)
+echo "🔧 Konfiguriere ArgoCD (Insecure Mode)..."
 kubectl patch deployment argocd-server -n argocd \
   --type='json' \
   -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/args", "value": ["/usr/local/bin/argocd-server", "--insecure", "--staticassets", "/shared/app"]}]'
-  
-# 6. Warten bis ArgoCD läuft
+
+# 6. Warten bis ArgoCD bereit ist
 echo "⏳ Warte auf ArgoCD..."
 kubectl wait --for=condition=available deployment/argocd-server -n argocd --timeout=300s
 
-echo "🎉 FERTIG! Cluster & ArgoCD laufen."
-echo "🔐 Hole Passwort..."
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
+# 7. Ingress erstellen (Modern & Clean)
+echo "🌐 Erstelle Ingress Route für ArgoCD..."
+cat <<EOF | kubectl apply -f -
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-server-ingress
+  namespace: argocd
+  # Annotation entfernt, da deprecated
+spec:
+  ingressClassName: traefik  # <-- Das ist der neue Weg!
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: argocd-server
+            port:
+              number: 80
+EOF
+
+# 8. Root-App direkt deployen 🚀
+echo "🌱 Starte GitOps Apps (Root App)..."
+if [ -f "infrastructure/k8s/root-app.yaml" ]; then
+    kubectl apply -f infrastructure/k8s/root-app.yaml
+else
+    echo "⚠️ WARNUNG: 'infrastructure/k8s/root-app.yaml' nicht gefunden. Bitte manuell ausführen."
+fi
+
+echo "------------------------------------------------"
+echo "🎉 FERTIG! Alles läuft vollautomatisch."
+echo "🌍 ArgoCD URL: http://localhost:8080"
+echo "👤 User:       admin"
+echo -n "🔑 Password:   "
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+echo ""
+echo "------------------------------------------------"

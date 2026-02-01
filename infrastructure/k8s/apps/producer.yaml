@@ -3,11 +3,6 @@ kind: Application
 metadata:
   name: opensky-producer
   namespace: argocd
-  annotations:
-    # 👇 WICHTIG: Hier steht jetzt der korrekte, lange Name (alles klein)!
-    argocd-image-updater.argoproj.io/image-list: myproducer=ghcr.io/kademeray/data-engineer-end-to-end-project/opensky-producer
-    argocd-image-updater.argoproj.io/myproducer.update-strategy: digest
-    argocd-image-updater.argoproj.io/write-back-method: git
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:

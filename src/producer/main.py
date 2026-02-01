@@ -47,7 +47,7 @@ def fetch_flight_data():
 
 def main():
     producer = get_producer()
-    logger.info("🚀 Starte Data Ingestion Loop...")
+    logger.info("🚀 Starte Data Loop...")
     
     while True:
         flights = fetch_flight_data()
