@@ -7,4 +7,4 @@ resources:
 images:
 - name: opensky-spark-processor
   newName: ghcr.io/kademeray/data-engineer-end-to-end-project/opensky-spark-processor
-  newTag: latest
+  newTag: 4ea5b41
