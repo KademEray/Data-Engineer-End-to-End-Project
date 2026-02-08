@@ -98,33 +98,38 @@ jobs:
       - name: Update Kubernetes Manifests
         if: steps.filter.outputs.src == 'true'
         run: |
+          # 1. Git Config setzen
           git config --global user.name 'GitHub Actions Bot'
           git config --global user.email 'actions@github.com'
 
-          # In den passenden Ordner wechseln (Matrix!)
+          # 2. In den Ordner wechseln
           cd ${{ matrix.manifest_path }}
 
-          # Kustomize installieren
+          # 3. Kustomize installieren & Änderung durchführen
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-
-          # Das Image Tag in der Datei ändern
-          # Der Trick: Wir setzen den Namen, den Kustomize suchen soll (aus der kustomization.yaml)
-          # auf das neue Image mit dem neuen Tag.
+          
+          # Das neue Image Tag setzen
           ./kustomize edit set image ${{ matrix.image_name }}=${{ env.FULL_IMAGE }}:${{ env.SHORT_SHA }}
           
+          # Aufräumen
           rm kustomize
 
-          # Zurück zum Root für den Commit
+          # 4. Änderung stagen (git add)
+          git add kustomization.yaml
+          
+          # Zurück zum Root
           cd ../../..
 
-          git add ${{ matrix.manifest_path }}/kustomization.yaml
-          
-          # Commit nur wenn sich was geändert hat
+          # 5. PRÜFEN & COMMITTEN (WICHTIG: Vor dem Pull!)
           if git diff-index --quiet HEAD; then
             echo "No changes to commit"
           else
-            # Pull vor Push um Konflikte zu vermeiden (falls Producer & Processor gleichzeitig laufen)
-            git pull --rebase
+            # Erst committen -> Damit ist die Änderung "gesichert"
             git commit -m "chore(ci): update ${{ matrix.component }} image to ${{ env.SHORT_SHA }}"
+            
+            # JETZT erst pullen -> Git spielt unseren Commit oben drauf
+            git pull --rebase
+            
+            # Und hoch damit
             git push
           fi
