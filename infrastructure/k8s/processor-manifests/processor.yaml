@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opensky-processor
+  namespace: processing
+  labels:
+    app: opensky-processor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opensky-processor
+  template:
+    metadata:
+      labels:
+        app: opensky-processor
+    spec:
+      containers:
+        - name: spark-processor
+          image: opensky-spark-processor:v1
+          imagePullPolicy: IfNotPresent  # <--- WICHTIG!
+          
+          command: ["/opt/spark/bin/spark-submit"]
+          args: 
+            - "--master"
+            - "local[*]"
+            - "/opt/spark/work-dir/main.py"
+
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "my-cluster-kafka-bootstrap.kafka.svc:9092"
+            - name: KAFKA_TOPIC
+              value: "flight_raw_data"
+            - name: DB_HOST
+              value: "postgres-service.database.svc.cluster.local"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "flight_data"
+            - name: DB_USER
+              value: "postgres"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: password

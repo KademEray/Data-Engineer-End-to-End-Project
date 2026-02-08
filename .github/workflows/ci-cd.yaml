@@ -1,0 +1,130 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'infrastructure/k8s/**'
+      - '.github/workflows/ci-cd.yaml'
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Für den Git Commit
+      packages: write  # Für den Docker Push
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # --- KONFIGURATION PRODUCER ---
+          - component: producer
+            context: src/producer
+            image_name: opensky-producer
+            manifest_path: infrastructure/k8s/producer-manifests
+          
+          # --- KONFIGURATION PROCESSOR ---
+          - component: processor
+            context: src/processor
+            image_name: opensky-spark-processor
+            manifest_path: infrastructure/k8s/processor-manifests
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # ---------------------------------------------------------
+      # 1. ÄNDERUNGEN ERKENNEN (Smart Filter)
+      # ---------------------------------------------------------
+      - name: Check for changes
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            src:
+              - '${{ matrix.context }}/**'
+
+      # Wir machen nur weiter, wenn sich in DIESEM Ordner was geändert hat
+      - name: Skip if no changes
+        if: steps.filter.outputs.src != 'true'
+        run: echo "No changes in ${{ matrix.component }}, skipping..."
+
+      # ---------------------------------------------------------
+      # 2. IMAGE NAME VORBEREITEN
+      # ---------------------------------------------------------
+      - name: Setup Image Name
+        if: steps.filter.outputs.src == 'true'
+        run: |
+          # Alles kleinschreiben für Docker
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          FULL_IMAGE="${{ env.REGISTRY }}/$REPO_LOWER/${{ matrix.image_name }}"
+          echo "FULL_IMAGE=$FULL_IMAGE" >> $GITHUB_ENV
+          echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      # ---------------------------------------------------------
+      # 3. DOCKER BUILD & PUSH
+      # ---------------------------------------------------------
+      - name: Log in to Registry
+        if: steps.filter.outputs.src == 'true'
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        if: steps.filter.outputs.src == 'true'
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and Push
+        if: steps.filter.outputs.src == 'true'
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: |
+            ${{ env.FULL_IMAGE }}:latest
+            ${{ env.FULL_IMAGE }}:${{ env.SHORT_SHA }}
+
+      # ---------------------------------------------------------
+      # 4. GITOPS UPDATE (Kustomize)
+      # ---------------------------------------------------------
+      - name: Update Kubernetes Manifests
+        if: steps.filter.outputs.src == 'true'
+        run: |
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'actions@github.com'
+
+          # In den passenden Ordner wechseln (Matrix!)
+          cd ${{ matrix.manifest_path }}
+
+          # Kustomize installieren
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+
+          # Das Image Tag in der Datei ändern
+          # Der Trick: Wir setzen den Namen, den Kustomize suchen soll (aus der kustomization.yaml)
+          # auf das neue Image mit dem neuen Tag.
+          ./kustomize edit set image ${{ matrix.image_name }}=${{ env.FULL_IMAGE }}:${{ env.SHORT_SHA }}
+          
+          rm kustomize
+
+          # Zurück zum Root für den Commit
+          cd ../../..
+
+          git add ${{ matrix.manifest_path }}/kustomization.yaml
+          
+          # Commit nur wenn sich was geändert hat
+          if git diff-index --quiet HEAD; then
+            echo "No changes to commit"
+          else
+            # Pull vor Push um Konflikte zu vermeiden (falls Producer & Processor gleichzeitig laufen)
+            git pull --rebase
+            git commit -m "chore(ci): update ${{ matrix.component }} image to ${{ env.SHORT_SHA }}"
+            git push
+          fi

@@ -2,7 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opensky-producer
-  namespace: kafka
+  namespace: kafka   # Wir lassen ihn im kafka Namespace, das ist okay
+  labels:
+    app: opensky-producer
 spec:
   replicas: 1
   selector:
@@ -15,7 +17,7 @@ spec:
     spec:
       containers:
       - name: producer
-        # 👇 KORREKTUR: Der lange Pfad mit Repo-Namen
+        # Wir nutzen dein Image von GitHub
         image: ghcr.io/kademeray/data-engineer-end-to-end-project/opensky-producer:latest
         imagePullPolicy: Always
         resources:
@@ -25,3 +27,8 @@ spec:
         env:
         - name: PYTHONUNBUFFERED
           value: "1"
+        # 👇 DAS HAT GEFEHLT: Wo ist Kafka?
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "my-cluster-kafka-bootstrap.kafka.svc:9092"
+        - name: KAFKA_TOPIC
+          value: "flight_raw_data"

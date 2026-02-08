@@ -1,114 +1,99 @@
-# Projekt Aufgabenliste
+# ✈️ Projekt Roadmap & Status
 
 ## 1. Infrastruktur & Setup (✅ ERLEDIGT)
-- [x] DevContainer Einrichtung.
-- [x] K3d Cluster Setup Skript.
-- [x] ArgoCD Installation & Ingress.
-- [x] GitOps Repository Struktur.
+
+* [x] **DevContainer:** Umgebung eingerichtet.
+* [x] **Cluster:** K3d Setup Skript (`setup.sh`) erstellt.
+* [x] **GitOps:** ArgoCD Installation, Ingress & Repository Struktur.
 
 ## 2. Data Ingestion Layer (✅ ERLEDIGT)
-- [x] **Message Broker (Strimzi Kafka):** Cluster & CRDs installiert.
-- [x] **Datenbank (Postgres Vanilla):** Deployment & PVC installiert.
-- [x] **Producer (Python):** Code, Dockerfile, CI-Pipeline (GitHub Action).
-- [X] Linting: Prüfen, ob der Python-Code sauber geschrieben ist (pylint / flake8). // Testing: Automatisierte Tests (pytest), bevor das Image überhaupt gebaut wird.
 
-## 3. DevOps & Automation (🚧 HIER SIND WIR)
-- [X] **Image Updater:**
-    - [X] Updater im Cluster installieren.
-    - [X] Annotations zur Producer-App hinzufügen.
-- [X] **Testlauf:** Code ändern -> Push -> Automatischer Deploy im Cluster beobachten.
+* [x] **Message Broker:** Strimzi Kafka Cluster & CRDs installiert.
+* [x] **Datenbank:** Postgres Deployment & PVC installiert.
+* [x] **Producer (Python):** Code zum Abruf der OpenSky API.
+* [x] **Quality:** Linting (Pylint) & Testing (Pytest) in CI integriert.
 
-## 🏗️ Phase 4: Storage Layer (PostgreSQL)
-*Das Ziel: Ein intelligentes Datenmodell, das Live-Zustand und Historie trennt.*
+## 3. DevOps & Automation (✅ ERLEDIGT)
 
-- [ ] **Task 1.1: Schema-Design `live_flights` (Der "State")**
-    - [ ] Tabelle erstellen: `live_flights`.
-    - [ ] **PK:** `icao24` (Muss unique sein).
-    - [ ] **Spalten:** `callsign`, `lat`, `lon`, `altitude`, `velocity_kmh` (berechnet), `heading`, `last_contact` (Unix Timestamp).
-    - [ ] **Indizes:** Index auf `last_contact` setzen (wichtig für Timeout-Abfragen später).
+* [x] **Image Updater:** ArgoCD Image Updater konfiguriert.
+* [x] **CI/CD:** GitHub Actions Pipeline ("CI-Push" Pattern) läuft.
+* [x] **Testlauf:** Automatisches Deployment nach Git-Push erfolgreich verifiziert.
 
-- [ ] **Task 1.2: Schema-Design `flight_histories` (Der "Log")**
-    - [ ] Tabelle erstellen: `flight_histories`.
-    - [ ] **PK:** `flight_uuid` (generiert beim ersten Kontakt).
-    - [ ] **Spalten:** `icao24`, `start_time`, `end_time`, `origin_country`.
-    - [ ] **Daten-Spalte:** `route_data` (Typ `JSONB` oder separate Tabelle für Wegpunkte), speichert Array aus `[lat, lon, time]`.
-    - [ ] **Constraint:** Foreign Key zu `live_flights` (optional, je nach Lösch-Strategie).
+## 🏗️ Phase 4: Storage Layer (PostgreSQL) (✅ ERLEDIGT)
 
----
+*Status: Das Data Warehouse Fundament steht (Star Schema).*
 
-## 📨 Phase 5: Ingestion Layer (Kafka & Producer)
-*Status: ✅ Bereits implementiert. Hier zur Vollständigkeit.*
+* [x] **Task: Schema-Design `dim_aircrafts` & `live_status**`
+* [x] Tabelle `dim_aircrafts` (Stammdaten, `transponder_hex`) erstellt.
+* [x] Tabelle `live_status` (Echtzeit-View mit UPSERT-Logik) erstellt.
+* [x] Indizes für Performance gesetzt.
 
-- [x] **Task 2.1: Kafka Topic Setup**
-    - [x] Topic: `flight_raw_data`.
-    - [ ] **Retention Policy:** Auf z.B. 2-6 Stunden setzen (Puffer für Spark-Wartung).
-- [x] **Task 2.2: Python Producer**
-    - [x] OpenSky API Abruf (DACH Region).
-    - [x] JSON Serialisierung.
-    - [x] Push zu Kafka.
 
----
+* [x] **Task: Schema-Design `flight_sessions'**
+* [x] Tabelle `flight_sessions` (Historie) erstellt.
+* [x] `JSONB` Spalte für effiziente Routen-Speicherung implementiert.
+
+
+* [x] **Task: Automatisierung**
+* [x] `init_db.sql` Skript erstellt.
+* [x] `setup.sh` erweitert: Automatische DB-Initialisierung mit Retry-Logik.
+
+
+## 📨 Phase 5: Kafka Configuration (✅ ERLEDIGT)
+
+*Das Bindeglied zwischen Producer und Consumer.*
+
+* [x] **Task: Topic Setup**
+* [x] Topic `flight_raw_data` angelegt.
+
+
+* [x] **Task: Data Flow Check**
+* [x] Producer sendet Daten (Verifiziert mit Consumer-Pod).
+
+
 
 ## 🧠 Phase 6: Processing Layer (Apache Spark)
-*Das Herzstück: ETL, Transformation und State-Management.*
 
-- [ ] **Task 3.1: Spark Infrastruktur**
-    - [ ] Docker-Image für Spark erstellen (Basis: Bitnami oder Apache).
-    - [ ] **Dependencies:** Hinzufügen der JARs für `spark-sql-kafka` und `postgresql-jdbc`.
-    - [ ] Spark-Master/Worker im K8s Cluster (oder Nutzung von `spark-submit` im Client Mode).
+*Das Herzstück: ETL, Transformation und Logik.*
 
-- [ ] **Task 3.2: Spark Streaming Job (Python/PySpark)**
-    - [ ] `readStream` von Kafka initialisieren.
-    - [ ] **Schema Definition:** JSON-Schema für die Rohdaten festlegen (StructType).
-    - [ ] **Transformation:**
-        - [ ] Filter: `null` Koordinaten verwerfen.
-        - [ ] Berechnung: `velocity` * 3.6 = `km/h`.
-        - [ ] Timestamp Conversion: Unix Int -> Timestamp Type.
+* [ ] **Task: Spark Infrastruktur** 👈 **NÄCHSTER SCHRITT**
+* [ ] Docker-Image für Spark erstellen (Custom Image mit Kafka/Postgres Treibern).
+* [ ] K8s Manifeste für Spark-Submit/Deployment.
 
-- [ ] **Task 3.3: Die "Smart Write" Logik (`foreachBatch`)**
-    - [ ] Implementierung der Funktion `process_batch(df, epoch_id)`:
-    - [ ] **Logik A (Live View):**
-        - [ ] JDBC Connection zu Postgres aufbauen.
-        - [ ] `INSERT ... ON CONFLICT (icao24) DO UPDATE` (Upsert Pattern).
-    - [ ] **Logik B (History Sampler - 5 Min Regel):**
-        - [ ] Join/Lookup mit `live_flights` oder internem State.
-        - [ ] Check: Ist `current_time - last_history_entry > 5 min`?
-        - [ ] Wenn JA: Append an `flight_histories` (bzw. Update des JSON-Arrays).
 
----
+* [ ] **Task: Spark Streaming Job (PySpark Code)**
+* [ ] `readStream` von Kafka implementieren.
+* [ ] Schema (StructType) definieren.
+* [ ] Transformationen: `m/s` in `km/h`, Bereinigung von Null-Werten.
+
+
+* [ ] **Task: Die "Smart Write" Logik (`foreachBatch`)**
+* [ ] **Logik A (Live View):** Lookup in `dim_aircrafts`, Upsert in `live_status`.
+* [ ] **Logik B (History):** Prüfen, ob neuer Punkt zur Route in `flight_sessions` hinzugefügt werden muss (5-Minuten-Regel).
+
+* [ ] **Task: Spark App Deployment**
+* [ ] Integration in ArgoCD (`opensky-processor`).
+
+
+* [ ] **Task: CI/CD Pipeline Erweiterung**
+* [ ] Build & Push für das Spark-Image in GitHub Actions aufnehmen.
+
 
 ## ⏱️ Phase 7: Orchestration & Maintenance (Apache Airflow)
+
 *Automatisierung und "Housekeeping".*
 
-- [ ] **Task 4.1: "Flight End" Detector (Der Aufräumer)**
-    - [ ] **Problem:** Flugzeuge melden sich nicht ab, sie verschwinden einfach.
-    - [ ] **DAG (Batch Job):** Läuft alle 5-10 Minuten.
-    - [ ] **SQL-Logik:** `SELECT * FROM live_flights WHERE last_contact < (NOW() - INTERVAL '20 minutes')`.
-    - [ ] **Aktion:**
-        1. Setze `end_time` in `flight_histories`.
-        2. Lösche Eintrag aus `live_flights`.
+* [ ] **Task 4.1: "Flight End" Detector (Batch Job)**
+* [ ] SQL-Logik: Identifiziere Flüge ohne Signal (> 20 min).
+* [ ] Aktion: Setze `end_time` in Historie, lösche aus Live-View.
 
-- [ ] **Task 4.2: Pipeline Monitoring**
-    - [ ] Check: Schreibt Spark noch Daten? (Data Freshness Alert).
-    - [ ] Check: Ist Kafka Topic Lag zu hoch?
 
----
+* [ ] **Task 4.2: Monitoring**
+* [ ] Überwachung der Pipeline-Gesundheit.
 
-## 🚀 Phase 8: Deployment & GitOps (CI/CD)
-*Wie der Code in den Cluster kommt.*
 
-- [ ] **Task 5.1: Database Migration Scripts**
-    - [ ] K8s Job erstellen, der beim Start die SQL-Tabellen anlegt (via `kubectl apply`).
+## 8. Visualization & Monitoring (Geplant)
 
-- [ ] **Task 5.2: Spark App Deployment**
-    - [ ] Packaging des PySpark-Codes in Docker.
-    - [ ] K8s Deployment Manifest für den Spark Consumer (`spark-submit`).
-    - [ ] Integration in ArgoCD (Application: `opensky-processor`).
-
-- [ ] **Task 5.3: CI/CD Pipeline Update**
-    - [ ] GitHub Action erweitern: Build & Push für das Spark-Image.
-    - [ ] Update der `kustomization.yaml` für den Processor.
-
-## 9. Visualization & Monitoring (Geplant)
-- [ ] Streamlit Dashboard.
-- [ ] Kafka UI.
+* [ ] Statistiken mit Power BI
+* [ ] Streamlit Dashboard.
+* [ ] Kafka UI.

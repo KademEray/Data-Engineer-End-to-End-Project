@@ -90,7 +90,33 @@ kubectl create secret docker-registry ghcr-secret \
   -n kafka
 ```
 
-## 🧨 5. Löschen (Teardown)
+## 5. SQL Skript auf laufenden Pod andwenden
+
+### 1. Den exakten Namen des Datenbank-Pods finden
+```bash
+DB_POD=$(kubectl get pod -n database -l app=postgres -o jsonpath="{.items[0].metadata.name}")
+```
+
+### 2. Die SQL-Datei in den Container kopieren
+```bash
+kubectl cp infrastructure/db/init_db.sql database/$DB_POD:/tmp/init_db.sql
+```
+
+### 3. Das SQL-Skript ausführen
+```bash
+kubectl exec -n database $DB_POD -- psql -U postgres -d postgres -f /tmp/init_db.sql
+```
+
+### 4. Kontrolle (Optional)
+
+#### In die DB einloggen
+
+```bash
+kubectl exec -it -n database $DB_POD -- psql -U postgres -d postgres -c "\dt"
+```
+
+
+## 🧨 6. Löschen (Teardown)
 Alles stoppen (Cluster löschen)
 Löscht den kompletten k3d Cluster. Alle Daten in der Datenbank gehen verloren!
 ```bash
