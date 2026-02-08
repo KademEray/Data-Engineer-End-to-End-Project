@@ -8,6 +8,8 @@ on:
       - 'src/**'
       - 'infrastructure/k8s/**'
       - '.github/workflows/ci-cd.yaml'
+      - '**/Dockerfile' 
+      - '**/requirements.txt'
 
 env:
   REGISTRY: ghcr.io

@@ -159,5 +159,6 @@ def main():
 
     query.awaitTermination()
 
+
 if __name__ == "__main__":
     main()

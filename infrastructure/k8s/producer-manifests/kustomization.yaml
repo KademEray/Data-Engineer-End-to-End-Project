@@ -5,6 +5,6 @@ resources:
 - producer.yaml
 
 images:
-- name: ghcr.io/kademeray/data-engineer-end-to-end-project/opensky-producer
+- name: opensky-producer 
   newName: ghcr.io/kademeray/data-engineer-end-to-end-project/opensky-producer
-  newTag: babe147
+  newTag: latest
